@@ -36,7 +36,8 @@ BG         = (0, 0, 0)
 PAST       = (220, 220, 220)
 FUTURE     = (32, 32, 32)
 TODAY_FILL = (210, 45, 45)    # rojo
-MATCH_LOGO = (210, 45, 45)    # rojo para logos de equipos
+MATCH_LOGO = (210, 45, 45)    # rojo — logo cuando es hoy
+LOGO_FUTURE = (110, 110, 110) # gris claro — logo en días futuros
 TEXT_YEAR  = (80, 80, 80)
 TEXT_INFO  = (100, 100, 100)
 
@@ -152,7 +153,7 @@ def get_logo(team_name, svg_url, cache_file, size):
             return None, None
 
     logo = logo.resize((dot_d, dot_d), Image.LANCZOS)
-    return tint_logo(logo, FUTURE), tint_logo(logo, MATCH_LOGO)
+    return tint_logo(logo, LOGO_FUTURE), tint_logo(logo, MATCH_LOGO)
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 def generate():
@@ -176,8 +177,8 @@ def generate():
     grid_w = COLS * step - GAP
     grid_h = rows * step - GAP
 
-    x0 = (W - grid_w) // 2   # = 151px margin each side
-    y0 = 693                  # matches reference top margin exactly
+    x0 = (W - grid_w) // 2
+    y0 = 650                  # ~43px higher than reference for bottom breathing room
 
     img  = Image.new("RGB", (W, H), BG)
     draw = ImageDraw.Draw(img)
