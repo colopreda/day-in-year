@@ -1,0 +1,4 @@
+Pillow
+cairosvg
+requests
+numpy
