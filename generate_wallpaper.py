@@ -28,8 +28,8 @@ else:
 
 W, H  = 1206, 2622   # iPhone 16 Pro resolution
 COLS  = 15
-DOT_R = 25
-GAP   = 11
+DOT_R = 24
+GAP   = 10
 
 # Colors
 BG         = (0, 0, 0)
@@ -178,7 +178,7 @@ def generate():
     grid_h = rows * step - GAP
 
     x0 = (W - grid_w) // 2
-    y0 = 650                  # ~43px higher than reference for bottom breathing room
+    y0 = 730                  # more top margin, dot size reduced 1px to keep bottom margin intact
 
     img  = Image.new("RGB", (W, H), BG)
     draw = ImageDraw.Draw(img)
