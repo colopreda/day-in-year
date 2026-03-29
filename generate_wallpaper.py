@@ -40,7 +40,14 @@ MATCH_LOGO = (210, 45, 45)    # rojo para logos de equipos
 TEXT_YEAR  = (80, 80, 80)
 TEXT_INFO  = (100, 100, 100)
 
-FONT_PATH = "/System/Library/Fonts/HelveticaNeue.ttc"
+# Font paths: macOS first, then common Linux locations
+FONT_CANDIDATES = [
+    "/System/Library/Fonts/HelveticaNeue.ttc",                          # macOS
+    "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",  # Ubuntu/Debian
+    "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",                  # Ubuntu/Debian fallback
+    "/usr/share/fonts/liberation/LiberationSans-Regular.ttf",           # Fedora/RHEL
+]
+FONT_PATH = next((p for p in FONT_CANDIDATES if os.path.exists(p)), None)
 
 # Teams config: (espn_url, svg_logo_url, cache_filename)
 TEAMS = {
@@ -61,10 +68,12 @@ def is_leap(year):
     return year % 4 == 0 and (year % 100 != 0 or year % 400 == 0)
 
 def load_font(size):
-    try:
-        return ImageFont.truetype(FONT_PATH, size)
-    except Exception:
-        return ImageFont.load_default()
+    if FONT_PATH:
+        try:
+            return ImageFont.truetype(FONT_PATH, size)
+        except Exception:
+            pass
+    return ImageFont.load_default(size=size)
 
 def centered_text(draw, y, text, font, color):
     bbox = draw.textbbox((0, 0), text, font=font)
