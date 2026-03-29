@@ -28,8 +28,8 @@ else:
 
 W, H  = 1206, 2622   # iPhone 16 Pro resolution
 COLS  = 15
-DOT_R = 30
-GAP   = 10
+DOT_R = 25
+GAP   = 11
 
 # Colors
 BG         = (0, 0, 0)
@@ -175,8 +175,8 @@ def generate():
     grid_w = COLS * step - GAP
     grid_h = rows * step - GAP
 
-    x0 = (W - grid_w) // 2
-    y0 = int(H * 0.149)  # ~390px, below the clock area (matches reference)
+    x0 = (W - grid_w) // 2   # = 151px margin each side
+    y0 = 693                  # matches reference top margin exactly
 
     img  = Image.new("RGB", (W, H), BG)
     draw = ImageDraw.Draw(img)
@@ -205,9 +205,9 @@ def generate():
         else:
             draw.ellipse([cx-DOT_R, cy-DOT_R, cx+DOT_R, cy+DOT_R], fill=FUTURE)
 
-    font_info = load_font(38)
+    font_info = load_font(44)
     info = f"Día {doy} de {total}  ·  {total - doy} restantes  ·  {pct:.1f}%"
-    centered_text(draw, y0 + grid_h + 60, info, font_info, TEXT_INFO)
+    centered_text(draw, y0 + grid_h + 30, info, font_info, TEXT_INFO)
 
     img.save(OUTPUT, "PNG")
     print(f"✓ Guardado en iCloud Drive: {OUTPUT}")
