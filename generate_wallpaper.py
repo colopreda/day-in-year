@@ -27,9 +27,9 @@ else:
     OUTPUT = os.path.join(ICLOUD, "year_wallpaper.png")
 
 W, H  = 1206, 2622   # iPhone 16 Pro resolution
-COLS  = 20
-DOT_R = 14
-GAP   = 12
+COLS  = 15
+DOT_R = 30
+GAP   = 10
 
 # Colors
 BG         = (0, 0, 0)
@@ -176,7 +176,7 @@ def generate():
     grid_h = rows * step - GAP
 
     x0 = (W - grid_w) // 2
-    y0 = (H - grid_h) // 2 + 80
+    y0 = int(H * 0.149)  # ~390px, below the clock area (matches reference)
 
     img  = Image.new("RGB", (W, H), BG)
     draw = ImageDraw.Draw(img)
@@ -206,9 +206,8 @@ def generate():
             draw.ellipse([cx-DOT_R, cy-DOT_R, cx+DOT_R, cy+DOT_R], fill=FUTURE)
 
     font_info = load_font(38)
-    centered_text(draw, y0 - 110, str(year), load_font(72), TEXT_YEAR)
     info = f"Día {doy} de {total}  ·  {total - doy} restantes  ·  {pct:.1f}%"
-    centered_text(draw, y0 + grid_h + 45, info, font_info, TEXT_INFO)
+    centered_text(draw, y0 + grid_h + 60, info, font_info, TEXT_INFO)
 
     img.save(OUTPUT, "PNG")
     print(f"✓ Guardado en iCloud Drive: {OUTPUT}")
