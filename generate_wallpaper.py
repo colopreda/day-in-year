@@ -87,8 +87,12 @@ def get_match_days(team_name, url, year, days_limit=None):
         print(f"  ⚠ No se pudo obtener calendario de {team_name}: {e}")
         return set()
 
-    # Dates are embedded as JSON: {"key":"date","value":"DD/MM"}
-    date_pattern = re.compile(r'\{"key":"date","value":"(\d{1,2})/(\d{1,2})"\}')
+    # Match only upcoming fixtures: rows with a "time" key, not a "result" key
+    date_pattern = re.compile(
+        r'\{"key":"date","value":"(\d{1,2})/(\d{1,2})"\},'
+        r'\{"key":"home_away","value":"[LV]"\},'
+        r'\{"key":"time","value":"\d{2}:\d{2}"\}'
+    )
     raw_dates = date_pattern.findall(resp.text)
 
     match_days = set()
