@@ -13,6 +13,7 @@ import io
 import numpy as np
 import requests
 import cairosvg
+from bs4 import BeautifulSoup
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 from datetime import date, timezone, datetime, timedelta
 
@@ -44,15 +45,15 @@ TEXT_INFO  = (100, 100, 100)
 # Bundled font — works on macOS and Linux (GitHub Actions)
 FONT_PATH = os.path.join(SCRIPT_DIR, "Inter-Regular.ttf")
 
-# Teams config: (espn_url, svg_logo_url, cache_filename)
+# Teams config: (url, svg_logo_url, cache_filename)
 TEAMS = {
     "river": (
-        "https://www.espn.com/soccer/team/fixtures/_/id/16/river-plate",
+        "https://www.promiedos.com.ar/team/river-plate/igi",
         "https://upload.wikimedia.org/wikipedia/commons/4/43/Club_Atl%C3%A9tico_River_Plate_logo.svg",
         "river_logo_cache.png",
     ),
     "argentina": (
-        "https://www.espn.com/soccer/team/fixtures/_/id/202/arg",
+        "https://www.promiedos.com.ar/team/argentina/cdhi",
         os.path.join(SCRIPT_DIR, "afa.svg"),
         "argentina_logo_cache.png",
     ),
@@ -74,37 +75,41 @@ def centered_text(draw, y, text, font, color):
     draw.text(((W - tw) // 2, y), text, fill=color, font=font)
 
 # ── Match days scraper ────────────────────────────────────────────────────────
-def get_match_days(team_name, espn_url, year, days_limit=None):
+def get_match_days(team_name, url, year, days_limit=None):
     """
-    Scrapes ESPN fixtures page and returns a set of day-of-year ints
-    for confirmed future matches. If days_limit is set, only includes
-    matches within that many days from today.
+    Scrapes a promiedos.com.ar team page and returns a set of day-of-year ints
+    for confirmed future matches. Dates on the page are DD/MM format.
+    If days_limit is set, only includes matches within that many days from today.
     """
     try:
-        resp = requests.get(espn_url, timeout=15, headers={"User-Agent": "Mozilla/5.0"})
+        resp = requests.get(url, timeout=15, headers={"User-Agent": "Mozilla/5.0"})
         resp.raise_for_status()
     except Exception as e:
         print(f"  ⚠ No se pudo obtener calendario de {team_name}: {e}")
         return set()
 
-    pattern = r'"date":"(20\d{2}-\d{2}-\d{2}T\d{2}:\d{2}Z)","tbd":(true|false)'
-    matches = re.findall(pattern, resp.text)
+    soup = BeautifulSoup(resp.text, "html.parser")
+    date_pattern = re.compile(r"^(\d{1,2})/(\d{1,2})$")
 
     match_days = set()
     tz_arg   = timezone(timedelta(hours=-3))
     today_dt = datetime.now(tz_arg)
     cutoff   = today_dt + timedelta(days=days_limit) if days_limit else None
 
-    for date_str, tbd in matches:
-        if tbd == "true":
+    for cell in soup.find_all(string=date_pattern):
+        m = date_pattern.match(cell.strip())
+        if not m:
             continue
+        day_n, month_n = int(m.group(1)), int(m.group(2))
         try:
-            dt = datetime.fromisoformat(date_str.replace("Z", "+00:00"))
-            dt_arg = dt.astimezone(tz_arg)
-            if dt_arg.year == year and dt_arg >= today_dt:
-                if cutoff is None or dt_arg <= cutoff:
-                    match_days.add(dt_arg.timetuple().tm_yday)
-        except Exception:
+            # Try current year first; if date already passed, try next year
+            dt = datetime(year, month_n, day_n, tzinfo=tz_arg)
+            if dt < today_dt:
+                dt = datetime(year + 1, month_n, day_n, tzinfo=tz_arg)
+            if dt.year == year and dt >= today_dt:
+                if cutoff is None or dt <= cutoff:
+                    match_days.add(dt.timetuple().tm_yday)
+        except ValueError:
             continue
 
     limit_str = f"próx. {days_limit} días" if days_limit else "todo el año"
@@ -163,11 +168,11 @@ def generate():
     total = 366 if is_leap(year) else 365
     pct   = doy / total * 100
 
-    espn_river, svg_river, cache_river       = TEAMS["river"]
-    espn_arg,   svg_arg,   cache_arg         = TEAMS["argentina"]
+    url_river, svg_river, cache_river       = TEAMS["river"]
+    url_arg,   svg_arg,   cache_arg         = TEAMS["argentina"]
 
-    river_days = get_match_days("River Plate", espn_river, year, days_limit=60)
-    arg_days   = get_match_days("Argentina",   espn_arg,   year)
+    river_days = get_match_days("River Plate", url_river, year, days_limit=60)
+    arg_days   = get_match_days("Argentina",   url_arg,   year)
 
     river_logo, river_logo_today = get_logo("River Plate", svg_river, cache_river, DOT_R) if river_days else (None, None)
     arg_logo,   arg_logo_today   = get_logo("Argentina",   svg_arg,   cache_arg,   DOT_R) if arg_days   else (None, None)
