@@ -2,4 +2,3 @@ Pillow
 cairosvg
 requests
 numpy
-beautifulsoup4

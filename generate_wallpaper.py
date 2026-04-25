@@ -13,7 +13,6 @@ import io
 import numpy as np
 import requests
 import cairosvg
-from bs4 import BeautifulSoup
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 from datetime import date, timezone, datetime, timedelta
 
@@ -88,19 +87,17 @@ def get_match_days(team_name, url, year, days_limit=None):
         print(f"  ⚠ No se pudo obtener calendario de {team_name}: {e}")
         return set()
 
-    soup = BeautifulSoup(resp.text, "html.parser")
-    date_pattern = re.compile(r"^(\d{1,2})/(\d{1,2})$")
+    # Dates are embedded as JSON: {"key":"date","value":"DD/MM"}
+    date_pattern = re.compile(r'\{"key":"date","value":"(\d{1,2})/(\d{1,2})"\}')
+    raw_dates = date_pattern.findall(resp.text)
 
     match_days = set()
     tz_arg   = timezone(timedelta(hours=-3))
     today_dt = datetime.now(tz_arg)
     cutoff   = today_dt + timedelta(days=days_limit) if days_limit else None
 
-    for cell in soup.find_all(string=date_pattern):
-        m = date_pattern.match(cell.strip())
-        if not m:
-            continue
-        day_n, month_n = int(m.group(1)), int(m.group(2))
+    for day_str, month_str in raw_dates:
+        day_n, month_n = int(day_str), int(month_str)
         try:
             # Try current year first; if date already passed, try next year
             dt = datetime(year, month_n, day_n, tzinfo=tz_arg)
