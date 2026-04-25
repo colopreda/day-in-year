@@ -99,12 +99,14 @@ def get_match_days(team_name, url, year, days_limit=None):
     for day_str, month_str in raw_dates:
         day_n, month_n = int(day_str), int(month_str)
         try:
-            # Try current year first; if date already passed, try next year
             dt = datetime(year, month_n, day_n, tzinfo=tz_arg)
-            if dt < today_dt:
+            dt_date = dt.date()
+            today_date = today_dt.date()
+            if dt_date < today_date:
                 dt = datetime(year + 1, month_n, day_n, tzinfo=tz_arg)
-            if dt.year == year and dt >= today_dt:
-                if cutoff is None or dt <= cutoff:
+                dt_date = dt.date()
+            if dt.year == year and dt_date >= today_date:
+                if cutoff is None or dt_date <= cutoff.date():
                     match_days.add(dt.timetuple().tm_yday)
         except ValueError:
             continue
