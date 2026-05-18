@@ -10,6 +10,7 @@ import os
 import re
 import math
 import io
+import time
 import numpy as np
 import requests
 import cairosvg
@@ -74,26 +75,35 @@ def centered_text(draw, y, text, font, color):
     draw.text(((W - tw) // 2, y), text, fill=color, font=font)
 
 # ── Match days scraper ────────────────────────────────────────────────────────
-def get_match_days(team_name, url, year, days_limit=None):
+def get_match_days(team_name, url, year, days_limit=None, retries=3, retry_delay=5):
     """
     Scrapes a promiedos.com.ar team page and returns a set of day-of-year ints
     for confirmed future matches. Dates on the page are DD/MM format.
     If days_limit is set, only includes matches within that many days from today.
+    Retries up to `retries` times if the request fails or returns no matches.
     """
-    try:
-        resp = requests.get(url, timeout=15, headers={"User-Agent": "Mozilla/5.0"})
-        resp.raise_for_status()
-    except Exception as e:
-        print(f"  ⚠ No se pudo obtener calendario de {team_name}: {e}")
-        return set()
-
-    # Match only upcoming fixtures: rows with a "time" key, not a "result" key
     date_pattern = re.compile(
         r'\{"key":"date","value":"(\d{1,2})/(\d{1,2})"\},'
         r'\{"key":"home_away","value":"[LV]"\},'
         r'\{"key":"time","value":"\d{2}:\d{2}"\}'
     )
-    raw_dates = date_pattern.findall(resp.text)
+
+    raw_dates = []
+    for attempt in range(1, retries + 1):
+        try:
+            resp = requests.get(url, timeout=15, headers={"User-Agent": "Mozilla/5.0"})
+            resp.raise_for_status()
+            raw_dates = date_pattern.findall(resp.text)
+            if raw_dates:
+                break
+            print(f"  ↻ {team_name}: sin partidos en intento {attempt}/{retries}, reintentando...")
+        except Exception as e:
+            print(f"  ↻ {team_name}: error en intento {attempt}/{retries}: {e}")
+        if attempt < retries:
+            time.sleep(retry_delay)
+    else:
+        print(f"  ⚠ {team_name}: no se pudieron obtener partidos tras {retries} intentos")
+        return set()
 
     match_days = set()
     tz_arg   = timezone(timedelta(hours=-3))
