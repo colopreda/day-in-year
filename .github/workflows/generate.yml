@@ -2,7 +2,7 @@ name: Generate Wallpaper
 
 on:
   schedule:
-    - cron: "0 0 * * *"   # 00:00 UTC = 21:00 Argentina (prev day) — runs early enough to finish before 06:00 ART download
+    - cron: "0 4 * * *"   # 04:00 UTC = 01:00 Argentina — runs early enough to finish before 06:00 ART download
   workflow_dispatch:        # permite ejecutar manualmente desde GitHub
 
 jobs:
