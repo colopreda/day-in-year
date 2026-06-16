@@ -175,9 +175,10 @@ def get_logo(team_name, svg_url, cache_file, size):
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 def generate():
-    today = date.today()
-    year  = today.year
-    doy   = today.timetuple().tm_yday
+    tz_arg = timezone(timedelta(hours=-3))
+    today  = datetime.now(tz_arg).date()
+    year   = today.year
+    doy    = today.timetuple().tm_yday
     total = 366 if is_leap(year) else 365
     pct   = doy / total * 100
 
