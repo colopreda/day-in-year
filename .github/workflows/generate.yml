@@ -2,7 +2,8 @@ name: Generate Wallpaper
 
 on:
   schedule:
-    - cron: "0 4 * * *"   # 04:00 UTC = 01:00 Argentina — runs early enough to finish before 06:00 ART download
+    - cron: "17 21 * * *"  # 18:17 ART; GitHub often runs crons hours late, so this renders tomorrow
+    - cron: "17 5 * * *"   # 02:17 ART backup in case the evening run is skipped
   workflow_dispatch:        # permite ejecutar manualmente desde GitHub
 
 jobs:
@@ -25,6 +26,9 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Generate wallpaper
+        id: gen
+        env:
+          NEXT_MORNING: "1"
         run: python generate_wallpaper.py
 
       - name: Commit and push wallpaper
@@ -32,6 +36,6 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add wallpaper.png
-          git diff --cached --quiet || git commit -m "wallpaper: $(date +'%Y-%m-%d')"
+          git diff --cached --quiet || git commit -m "wallpaper: ${{ steps.gen.outputs.date }}"
           git pull --rebase origin main
           git push

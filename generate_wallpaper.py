@@ -75,7 +75,7 @@ def centered_text(draw, y, text, font, color):
     draw.text(((W - tw) // 2, y), text, fill=color, font=font)
 
 # ── Match days scraper ────────────────────────────────────────────────────────
-def get_match_days(team_name, url, year, days_limit=None, retries=3, retry_delay=5):
+def get_match_days(team_name, url, year, today_date, days_limit=None, retries=3, retry_delay=5):
     """
     Scrapes a promiedos.com.ar team page and returns a set of day-of-year ints
     for confirmed future matches. Dates on the page are DD/MM format.
@@ -107,20 +107,18 @@ def get_match_days(team_name, url, year, days_limit=None, retries=3, retry_delay
 
     match_days = set()
     tz_arg   = timezone(timedelta(hours=-3))
-    today_dt = datetime.now(tz_arg)
-    cutoff   = today_dt + timedelta(days=days_limit) if days_limit else None
+    cutoff   = today_date + timedelta(days=days_limit) if days_limit else None
 
     for day_str, month_str in raw_dates:
         day_n, month_n = int(day_str), int(month_str)
         try:
             dt = datetime(year, month_n, day_n, tzinfo=tz_arg)
             dt_date = dt.date()
-            today_date = today_dt.date()
             if dt_date < today_date:
                 dt = datetime(year + 1, month_n, day_n, tzinfo=tz_arg)
                 dt_date = dt.date()
             if dt.year == year and dt_date >= today_date:
-                if cutoff is None or dt_date <= cutoff.date():
+                if cutoff is None or dt_date <= cutoff:
                     match_days.add(dt.timetuple().tm_yday)
         except ValueError:
             continue
@@ -174,9 +172,16 @@ def get_logo(team_name, svg_url, cache_file, size):
     return tint_logo(logo, LOGO_FUTURE), tint_logo(logo, MATCH_LOGO)
 
 # ── Main ──────────────────────────────────────────────────────────────────────
-def generate():
+def target_date():
     tz_arg = timezone(timedelta(hours=-3))
-    today  = datetime.now(tz_arg).date()
+    now    = datetime.now(tz_arg)
+    # GitHub's cron can run hours late, so the evening run renders the next morning's day
+    if os.environ.get("NEXT_MORNING"):
+        now += timedelta(hours=12)
+    return now.date()
+
+def generate():
+    today  = target_date()
     year   = today.year
     doy    = today.timetuple().tm_yday
     total = 366 if is_leap(year) else 365
@@ -185,8 +190,8 @@ def generate():
     url_river, svg_river, cache_river       = TEAMS["river"]
     url_arg,   svg_arg,   cache_arg         = TEAMS["argentina"]
 
-    river_days = get_match_days("River Plate", url_river, year, days_limit=60)
-    arg_days   = get_match_days("Argentina",   url_arg,   year)
+    river_days = get_match_days("River Plate", url_river, year, today, days_limit=60)
+    arg_days   = get_match_days("Argentina",   url_arg,   year, today)
 
     river_logo, river_logo_today = get_logo("River Plate", svg_river, cache_river, DOT_R) if river_days else (None, None)
     arg_logo,   arg_logo_today   = get_logo("Argentina",   svg_arg,   cache_arg,   DOT_R) if arg_days   else (None, None)
@@ -232,7 +237,10 @@ def generate():
 
     img.save(OUTPUT, "PNG")
     print(f"✓ Guardado en iCloud Drive: {OUTPUT}")
-    print(f"  {year} — Día {doy}/{total} ({pct:.1f}%)")
+    print(f"  {today} — Día {doy}/{total} ({pct:.1f}%)")
+    if os.environ.get("GITHUB_OUTPUT"):
+        with open(os.environ["GITHUB_OUTPUT"], "a") as f:
+            f.write(f"date={today}\n")
 
 if __name__ == "__main__":
     generate()
